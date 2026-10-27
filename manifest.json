@@ -1,0 +1,60 @@
+{
+  "name": "CineMatch ML - Movie Recommendation System",
+  "short_name": "CineMatch ML",
+  "description": "Machine Learning based Movie Recommendation System matching user preferences across Genre, Duration, Rating, and Multi-Attribute Vector Similarity.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#141916",
+  "theme_color": "#1B221E",
+  "orientation": "any",
+  "categories": ["entertainment", "utilities", "education"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ML Matcher",
+      "short_name": "Matcher",
+      "description": "Input preferences and calculate recommendations",
+      "url": "./index.html?tab=matcher",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Model Studio",
+      "short_name": "Studio",
+      "description": "View ML weights and algorithm diagnostics",
+      "url": "./index.html?tab=studio",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Watchlist",
+      "short_name": "Watchlist",
+      "description": "Open your saved movies",
+      "url": "./index.html?tab=watchlist",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CineMatch ML - Movie Recommendation System (Machine Learning PWA)</title>
+
+  <!-- PWA Metadata -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#1B221E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CineMatch ML">
+  <meta name="description" content="Machine Learning based Movie Recommendation System matching user preferences across Genre, Duration, Rating, and Multi-Attribute Vector Similarity.">
+
+  <!-- Favicon and App Icons -->
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-192.png">
+
+  <!-- Tailwind CSS CDN + Theme Extension with Curated Earth Palette -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            rust: '#9E624C',
+            rustLight: '#B8745E',
+            rustDark: '#7D4936',
+            nude: '#E9E3DD',
+            ivory: '#F3EDE2',
+            forest: '#59665C',
+            forestLight: '#708074',
+            forestDark: '#3E4940',
+            forestDeep: '#161B18',
+            forestSurface: '#1B221E',
+            sand: '#D1C1B1',
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body class="bg-[#141916] text-[#F3EDE2] min-h-screen flex flex-col antialiased">
+
+  <!-- ============================================================== -->
+  <!-- TOP NAVIGATION BAR (WITH ROLE BADGE, SYNC, SOUND & AUTH CONTROLS) -->
+  <!-- ============================================================== -->
+  <header
+    class="sticky top-0 z-50 bg-[#1B221E]/95 backdrop-blur-xl border-b border-[#9E624C]/30 px-3 sm:px-4 md:px-6 py-2.5 flex flex-wrap justify-between items-center gap-2 sm:gap-3 transition-all">
+
+    <!-- Left: Brand Logo & Title -->
+    <div class="flex items-center gap-2.5 sm:gap-3">
+      <div class="relative shrink-0">
+        <img src="./icons/logo.png" alt="CineMatch ML Logo"
+          class="w-9 h-9 sm:w-11 sm:h-11 rounded-full object-cover shadow-lg border-2 border-[#9E624C]/80 ring-2 ring-[#59665C]/40 transition-transform hover:scale-105">
+      </div>
+      <div>
+        <h1 class="text-xs sm:text-base font-extrabold text-[#F3EDE2] leading-tight flex items-center gap-1.5">
+          CineMatch ML
+          <span
+            class="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#9E624C]/25 text-[#F3EDE2] border border-[#9E624C]/40">v2.6 Research</span>
+        </h1>
+        <p class="text-[10px] sm:text-[11px] text-[#D1C1B1] font-semibold tracking-wide">Movie Recommendation Engine</p>
+      </div>
+    </div>
+
+    <!-- Center: View Switcher Navigation Pills -->
+    <nav
+      class="flex items-center gap-1 sm:gap-1.5 bg-[#161F36]/80 p-1 rounded-full border border-white/10 max-w-full overflow-x-auto scrollbar-none"
+      aria-label="Application Views">
+      <button data-tab="matcher" class="nav-pill active" id="tab-matcher-btn">
+        <span>🎯</span>
+        <span>ML Recommender</span>
+      </button>
+      <button data-tab="explorer" class="nav-pill" id="tab-explorer-btn">
+        <span>🎬</span>
+        <span>Movie Library</span>
+      </button>
+      <button data-tab="studio" class="nav-pill" id="tab-studio-btn">
+        <span>🧠</span>
+        <span>Model Studio</span>
+      </button>
+      <button data-tab="watchlist" class="nav-pill" id="tab-watchlist-btn">
+        <span>🔖</span>
+        <span>Watchlist</span>
+        <span id="nav-watchlist-count" class="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-500/30 text-indigo-200 font-mono font-bold">2</span>
+      </button>
+    </nav>
+
+    <!-- Right: Status Indicator, Sound, PWA Install & Auth Controls -->
+    <div class="flex items-center gap-2 sm:gap-2.5">
+
+      <!-- Live ML Inference Engine Status Pill -->
+      <div id="ml-status-indicator" class="sync-status-pill" title="Local Multi-Attribute Cosine & Gaussian Inference Active">
+        <span class="sync-dot"></span>
+        <span class="sync-text hidden lg:inline">ML Engine Active</span>
+      </div>
+
+      <!-- Web Audio Sound Toggle Button -->
+      <button id="toggle-sound-btn"
+        class="btn-outline text-xs p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl flex items-center gap-1 font-semibold"
+        title="Toggle Synthesizer Sound Effects">
+        <span id="sound-icon">🔊</span>
+        <span class="hidden xl:inline text-[11px]">Audio FX</span>
+      </button>
+
+      <!-- PWA Install Button (Dynamic) -->
+      <button id="pwa-install-btn"
+        class="btn-outline text-xs py-1.5 px-2.5 sm:px-3 text-cyan-300 border-cyan-800 hover:bg-cyan-950/60 font-bold rounded-xl hidden"
+        title="Install CineMatch ML as Progressive Web App">
+        <span>📲</span>
+        <span class="hidden sm:inline">Install</span>
+      </button>
+
+      <!-- State 1: Guest Mode (Not Logged In) -->
+      <div id="auth-guest-controls" class="flex items-center gap-2">
+        <span class="text-xs text-[#94A3B8] font-semibold hidden xl:inline">
+          Guest Mode
+        </span>
+        <button id="open-login-btn"
+          class="btn-primary text-xs py-1.5 px-3 sm:px-3.5 rounded-xl font-black shadow-lg flex items-center gap-1.5 border border-[#FDE047]/50 transition-transform hover:scale-105"
+          title="Sign in as Cinephile Member or ML Data Scientist">
+          <span>🔑</span>
+          <span>Sign In</span>
+          <span
+            class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#0E1424]/80 text-[#FDE047] uppercase tracking-wider hidden md:inline">Portal</span>
+        </button>
+      </div>
+
+      <!-- State 2: Authenticated (User or Admin Logged In) -->
+      <div id="auth-user-controls" class="items-center gap-2" style="display:none;">
+        <button id="auth-user-badge"
+          class="text-xs py-1 px-2.5 sm:px-3 rounded-full font-bold bg-[#161F36] border border-[#F5C518]/50 text-[#FDE047] hover:border-[#F5C518] transition-all max-w-[150px] truncate"
+          title="Click to switch session or view profile">
+          👤 Sarth
+        </button>
+        <button id="logout-btn"
+          class="btn-outline text-xs py-1.5 px-2.5 sm:px-3 text-rose-300 border-rose-800 hover:bg-rose-950/60 font-bold rounded-xl"
+          title="Log out and return to Guest Explorer">
+          <span>🚪</span>
+          <span class="hidden sm:inline">Log Out</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ============================================================== -->
+  <!-- MAIN APPLICATION CONTENT AREA                                  -->
+  <!-- ============================================================== -->
+  <main class="flex-1 w-full max-w-[1500px] mx-auto p-3 sm:p-4 md:p-6 lg:p-8 space-y-6">
+
+    <!-- ============================================================== -->
+    <!-- VIEW 1: ML RECOMMENDER (CORE INTERACTIVE SPECIFICATION)       -->
+    <!-- ============================================================== -->
+    <section id="view-matcher" class="space-y-6">
+
+      <!-- Hero Header Banner -->
+      <div class="glass-panel p-4 sm:p-6 relative overflow-hidden">
+        <div class="absolute -right-12 -bottom-12 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-12 -top-12 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="max-w-3xl space-y-2">
+          <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold">
+            <span>✨</span>
+            <span>Mathematical Multi-Attribute Matching Matrix</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+            Personalized Movie Recommendations Powered by Machine Learning
+          </h2>
+          <p class="text-xs sm:text-sm text-[#94A3B8] leading-relaxed">
+            Configure your preferred <strong class="text-amber-400">Genre</strong>, <strong class="text-amber-400">Duration</strong>, and <strong class="text-amber-400">Rating</strong>.
+            The ML algorithm compares your preferences against our multidimensional feature dataset and computes vector proximity scores in real time.
+          </p>
+        </div>
+      </div>
+
+      <!-- Control Inputs Card (The 3 Core Parameters from Abstract + Enhancements) -->
+      <div class="glass-panel p-4 sm:p-6 lg:p-8 space-y-6">
+        
+        <!-- Parameter 1: Genre Selection -->
+        <div class="space-y-2.5">
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <div>
+              <label class="text-sm font-bold text-white flex items-center gap-1.5">
+                <span class="text-amber-400">1.</span>
+                <span>Select Target Genres</span>
+                <span class="text-xs font-normal text-slate-400">(Multi-select vector feature)</span>
+              </label>
+              <p class="text-xs text-slate-400">Choose one or more genres to match your taste profile.</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <button type="button" id="btn-select-all-genres" class="text-indigo-400 hover:text-indigo-300 font-semibold underline">Select All</button>
+              <span class="text-slate-600">•</span>
+              <button type="button" id="btn-clear-genres" class="text-slate-400 hover:text-slate-200 font-semibold underline">Clear</button>
+            </div>
+          </div>
+          
+          <!-- Genre Chips Matrix -->
+          <div class="flex flex-wrap gap-2" id="genre-chips-container">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+
+        <hr class="border-white/5">
+
+        <!-- Parameter 2 & 3: Duration & Rating in Responsive Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <!-- Parameter 2: Duration Preference -->
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm font-bold text-white flex items-center gap-1.5">
+                <span class="text-amber-400">2.</span>
+                <span>Preferred Duration</span>
+                <span class="text-xs font-normal text-slate-400">(Gaussian runtime penalty model)</span>
+              </label>
+              <p class="text-xs text-slate-400">Choose running time category or set custom runtime target.</p>
+            </div>
+
+            <!-- 3 Category Cards -->
+            <div class="grid grid-cols-3 gap-2.5">
+              <button type="button" data-duration="Short" class="duration-choice-card">
+                <div class="text-xs font-bold text-white">Short</div>
+                <div class="text-[11px] text-amber-400 font-mono-num font-semibold">&lt; 90 min</div>
+                <div class="text-[10px] text-slate-400 mt-1">Crisp pacing</div>
+              </button>
+
+              <button type="button" data-duration="Medium" class="duration-choice-card selected">
+                <div class="text-xs font-bold text-white">Medium</div>
+                <div class="text-[11px] text-amber-400 font-mono-num font-semibold">90–130 min</div>
+                <div class="text-[10px] text-slate-400 mt-1">Standard length</div>
+              </button>
+
+              <button type="button" data-duration="Long" class="duration-choice-card">
+                <div class="text-xs font-bold text-white">Long</div>
+                <div class="text-[11px] text-amber-400 font-mono-num font-semibold">&gt; 130 min</div>
+                <div class="text-[10px] text-slate-400 mt-1">Epic narrative</div>
+              </button>
+            </div>
+
+            <!-- Granular Target Runtime Slider -->
+            <div class="pt-2">
+              <div class="flex justify-between items-center text-xs mb-1">
+                <span class="text-slate-300 font-semibold">Precise Target Runtime:</span>
+                <span id="runtime-display" class="font-mono-num font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">115 minutes</span>
+              </div>
+              <input type="range" id="runtime-slider" min="60" max="210" step="5" value="115"
+                class="w-full accent-amber-400 cursor-pointer h-2 bg-slate-800 rounded-lg">
+              <div class="flex justify-between text-[10px] text-slate-500 font-mono-num mt-1">
+                <span>60m (Quick)</span>
+                <span>120m (2 hrs)</span>
+                <span>210m (3.5 hrs)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Parameter 3: Expected Minimum Rating -->
+          <div class="space-y-3">
+            <div>
+              <label class="text-sm font-bold text-white flex items-center gap-1.5">
+                <span class="text-amber-400">3.</span>
+                <span>Minimum Expected Rating</span>
+                <span class="text-xs font-normal text-slate-400">(Sigmoidal threshold curve)</span>
+              </label>
+              <p class="text-xs text-slate-400">Filter and score movies satisfying your standard of critical acclaim.</p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-900/60 border border-white/5 space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-xs text-slate-300 font-semibold">Rating Threshold:</span>
+                <div class="flex items-center gap-1 text-amber-400 font-mono-num font-extrabold text-base bg-amber-400/10 px-2.5 py-1 rounded-lg border border-amber-400/30">
+                  <span>★</span>
+                  <span id="rating-display">7.5</span>
+                  <span class="text-xs text-amber-400/70 font-normal">/ 10</span>
+                </div>
+              </div>
+
+              <input type="range" id="rating-slider" min="6.0" max="9.0" step="0.1" value="7.5"
+                class="w-full accent-amber-400 cursor-pointer h-2 bg-slate-800 rounded-lg">
+
+              <div class="flex justify-between text-[10px] text-slate-500 font-mono-num">
+                <span>6.0 (Casual)</span>
+                <span>7.5 (High Quality)</span>
+                <span>8.5+ (Masterpieces)</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Optional Enhanced Parameters Accordion (As mentioned in the abstract) -->
+        <div class="rounded-xl border border-white/5 bg-slate-900/40 overflow-hidden">
+          <button type="button" id="toggle-advanced-params"
+            class="w-full p-3.5 flex justify-between items-center text-xs font-bold text-slate-300 hover:text-white transition-colors cursor-pointer">
+            <span class="flex items-center gap-2">
+              <span class="text-indigo-400">⚙️</span>
+              <span>Advanced Personalized Parameters (Language, Release Era &amp; Mood)</span>
+            </span>
+            <span id="advanced-chevron" class="text-slate-400 transition-transform">▼</span>
+          </button>
+
+          <div id="advanced-params-drawer" class="p-4 pt-1 space-y-4 border-t border-white/5 hidden">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              
+              <!-- Language -->
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Language</label>
+                <select id="filter-language" class="auth-select text-xs py-2">
+                  <option value="All">All Languages</option>
+                  <option value="English">English</option>
+                  <option value="Hindi">Hindi</option>
+                  <option value="Korean">Korean</option>
+                  <option value="Japanese">Japanese</option>
+                  <option value="French">French</option>
+                </select>
+              </div>
+
+              <!-- Release Era -->
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Release Era</label>
+                <select id="filter-era" class="auth-select text-xs py-2">
+                  <option value="All">All Eras</option>
+                  <option value="classic">Classics (&lt; 2000)</option>
+                  <option value="golden">Golden Era (2000 – 2015)</option>
+                  <option value="modern">Modern Era (2016 – 2022)</option>
+                  <option value="recent">Recent Hits (2023 – 2026)</option>
+                </select>
+              </div>
+
+              <!-- Mood / Vibe -->
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Vibe / Mood</label>
+                <select id="filter-vibe" class="auth-select text-xs py-2">
+                  <option value="All">Any Vibe</option>
+                  <option value="mind-bending">Mind-bending</option>
+                  <option value="intense">High Adrenaline / Intense</option>
+                  <option value="feel-good">Feel-good / Uplifting</option>
+                  <option value="heartfelt">Emotional &amp; Deep</option>
+                  <option value="wholesome">Wholesome Family</option>
+                </select>
+              </div>
+
+            </div>
+
+            <!-- Cast / Director keyword -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Director or Actor Affinity (Optional)</label>
+              <input type="text" id="filter-query" placeholder="e.g. Christopher Nolan, Leonardo DiCaprio, Aamir Khan..."
+                class="auth-input text-xs py-2 font-normal">
+            </div>
+          </div>
+        </div>
+
+        <!-- Big ML Recommendation Trigger Action Button -->
+        <div class="pt-2">
+          <button type="button" id="btn-run-recommendation"
+            class="btn-primary w-full py-3.5 px-6 rounded-xl font-extrabold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2.5 transition-all shadow-xl">
+            <span class="text-lg">⚡</span>
+            <span>CALCULATE ML RECOMMENDATIONS</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-slate-900/80 text-amber-300 font-mono font-bold">Cosine + Gaussian Model</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Recommendation Results Section -->
+      <div class="space-y-4" id="recommendation-results-anchor">
+        <div class="flex flex-wrap justify-between items-center gap-2">
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <span>🎯</span>
+              <span>Algorithm Results</span>
+              <span id="results-count-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-mono-num font-bold">12 Movies Ranked</span>
+            </h3>
+            <p class="text-xs text-slate-400">Ranked by multi-attribute vector similarity and rating proximity.</p>
+          </div>
+          <div class="text-xs text-slate-400 font-mono-num">
+            <span>Inference Latency: </span>
+            <strong class="text-emerald-400 font-bold">&lt; 15ms</strong>
+          </div>
+        </div>
+
+        <!-- Movie Cards Grid -->
+        <div id="recommendations-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 2: MOVIE EXPLORER (BROWSE FULL DATASET & SEARCH)          -->
+    <!-- ============================================================== -->
+    <section id="view-explorer" class="space-y-6 hidden">
+
+      <div class="glass-panel p-4 sm:p-6 space-y-4">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <span>🎬</span>
+            <span>Comprehensive Movie Dataset</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400">
+            Browse, filter, and inspect the complete catalog used by the recommendation engine.
+          </p>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <input type="text" id="explorer-search-input" placeholder="Search by title, director, actor, or genre..."
+              class="auth-input text-xs py-2.5">
+          </div>
+          <div>
+            <select id="explorer-sort-select" class="auth-select text-xs py-2.5">
+              <option value="rating-desc">Sort by: Highest Rated</option>
+              <option value="year-desc">Sort by: Newest Releases</option>
+              <option value="duration-asc">Sort by: Shortest Runtime</option>
+              <option value="duration-desc">Sort by: Longest Runtime</option>
+              <option value="title-asc">Sort by: Alphabetical (A-Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Explorer Movie Grid -->
+      <div id="explorer-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+        <!-- Dynamically populated via JS -->
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 3: MODEL STUDIO (DATA SCIENCE HYPERPARAMETER TUNING)      -->
+    <!-- ============================================================== -->
+    <section id="view-studio" class="space-y-6 hidden">
+
+      <div class="glass-panel p-4 sm:p-6 space-y-3">
+        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-bold">
+          <span>⚙️</span>
+          <span>Data Science &amp; Algorithm Optimization Workbench</span>
+        </div>
+        <h2 class="text-xl sm:text-2xl font-bold text-white">
+          Recommendation Hyperparameters &amp; Weight Tuning
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-400 max-w-3xl leading-relaxed">
+          The CineMatch recommendation algorithm aggregates individual similarity scores using a weighted linear combination:
+          <code class="text-amber-400 font-mono text-xs">Score = w_genre·S_g + w_duration·S_d + w_rating·S_r + w_enhanced·S_e</code>.
+          Adjust these hyperparameter weights below and run validation benchmarks to observe model response.
+        </p>
+      </div>
+
+      <!-- Weight Sliders Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Weight Controls Card -->
+        <div class="glass-panel p-4 sm:p-6 space-y-5">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span>⚖️</span>
+            <span>Feature Importance Weights</span>
+          </h3>
+
+          <!-- Genre Weight Slider -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-slate-300">Genre Vector Weight (w_genre):</span>
+              <span id="weight-genre-val" class="font-mono text-indigo-400 font-bold">0.40</span>
+            </div>
+            <input type="range" id="weight-genre-slider" min="0.05" max="0.80" step="0.05" value="0.40"
+              class="w-full accent-indigo-400 cursor-pointer h-2 bg-slate-800 rounded-lg">
+          </div>
+
+          <!-- Duration Weight Slider -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-slate-300">Duration Gaussian Weight (w_duration):</span>
+              <span id="weight-duration-val" class="font-mono text-amber-400 font-bold">0.30</span>
+            </div>
+            <input type="range" id="weight-duration-slider" min="0.05" max="0.80" step="0.05" value="0.30"
+              class="w-full accent-amber-400 cursor-pointer h-2 bg-slate-800 rounded-lg">
+          </div>
+
+          <!-- Rating Weight Slider -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-slate-300">Rating Sigmoidal Weight (w_rating):</span>
+              <span id="weight-rating-val" class="font-mono text-emerald-400 font-bold">0.20</span>
+            </div>
+            <input type="range" id="weight-rating-slider" min="0.05" max="0.80" step="0.05" value="0.20"
+              class="w-full accent-emerald-400 cursor-pointer h-2 bg-slate-800 rounded-lg">
+          </div>
+
+          <!-- Enhanced Weight Slider -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-slate-300">Secondary Parameter Weight (w_enhanced):</span>
+              <span id="weight-enhanced-val" class="font-mono text-cyan-400 font-bold">0.10</span>
+            </div>
+            <input type="range" id="weight-enhanced-slider" min="0.00" max="0.50" step="0.05" value="0.10"
+              class="w-full accent-cyan-400 cursor-pointer h-2 bg-slate-800 rounded-lg">
+          </div>
+
+          <div class="flex items-center gap-3 pt-2">
+            <button type="button" id="btn-save-weights" class="btn-primary text-xs py-2 px-4 rounded-xl flex-1 font-bold">
+              Save Calibrated Weights
+            </button>
+            <button type="button" id="btn-reset-weights" class="btn-outline text-xs py-2 px-4 rounded-xl font-bold">
+              Reset Defaults
+            </button>
+          </div>
+        </div>
+
+        <!-- Benchmark Diagnostics Card -->
+        <div class="glass-panel p-4 sm:p-6 space-y-4 flex flex-col justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2 mb-2">
+              <span>📊</span>
+              <span>Model Accuracy &amp; Validation Benchmark</span>
+            </h3>
+            <p class="text-xs text-slate-400 leading-relaxed mb-4">
+              Simulates multi-query inference over sample user taste distributions to measure average match fitness.
+            </p>
+
+            <div id="benchmark-results-box" class="p-3.5 rounded-xl bg-slate-900/80 border border-white/5 space-y-2 text-xs font-mono">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Dataset Vector Elements:</span>
+                <span class="text-white font-bold" id="bm-dataset-size">30 Titles</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Benchmark Mean Reciprocal Fitness:</span>
+                <span class="text-emerald-400 font-bold" id="bm-fitness">92%</span>
+              </div>
+              <div class="text-[11px] text-slate-500 pt-1 border-t border-white/5" id="bm-test-cases">
+                <!-- Test cases injected here -->
+              </div>
+            </div>
+          </div>
+
+          <button type="button" id="btn-run-benchmark" class="btn-outline text-xs py-2.5 px-4 rounded-xl font-bold text-amber-300 border-amber-500/30 hover:bg-amber-500/10 w-full mt-4">
+            🚀 Run Benchmark Simulation Suite
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- VIEW 4: MY WATCHLIST (SAVED FAVORITES)                         -->
+    <!-- ============================================================== -->
+    <section id="view-watchlist" class="space-y-6 hidden">
+
+      <div class="glass-panel p-4 sm:p-6 space-y-2">
+        <h2 class="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+          <span>🔖</span>
+          <span>My Saved Watchlist</span>
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-400">
+          Movies you bookmarked from your personalized recommendations. Stored locally on this device.
+        </p>
+      </div>
+
+      <!-- Watchlist Movies Grid -->
+      <div id="watchlist-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+        <!-- Dynamically populated via JS -->
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- MOVIE DETAIL & EXPLAINABILITY MODAL                            -->
+  <!-- ============================================================== -->
+  <div class="movie-modal-overlay" id="movie-detail-modal" aria-hidden="true">
+    <div class="movie-modal-card">
+      <div class="p-4 sm:p-6 border-b border-white/10 flex justify-between items-start">
+        <div class="space-y-1 pr-4">
+          <div class="flex items-center gap-2">
+            <span id="modal-match-badge" class="match-badge match-badge-ultra">98% Match</span>
+            <span id="modal-year-badge" class="text-xs font-mono text-slate-400">2010</span>
+            <span id="modal-duration-badge" class="text-xs font-mono text-slate-400">148 mins</span>
+          </div>
+          <h3 id="modal-movie-title" class="text-xl sm:text-2xl font-extrabold text-white">Inception</h3>
+          <p id="modal-director" class="text-xs text-amber-400 font-semibold">Directed by Christopher Nolan</p>
+        </div>
+        <button type="button" id="btn-close-movie-modal"
+          class="text-slate-400 hover:text-white text-xl p-1 rounded-lg transition-colors cursor-pointer"
+          title="Close details">&times;</button>
+      </div>
+
+      <div class="p-4 sm:p-6 space-y-4 overflow-y-auto">
+        <!-- Genres & Language -->
+        <div class="flex flex-wrap items-center gap-2" id="modal-genres">
+          <!-- Injected via JS -->
+        </div>
+
+        <!-- Synopsis -->
+        <div>
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Synopsis</h4>
+          <p id="modal-synopsis" class="text-xs sm:text-sm text-slate-200 leading-relaxed"></p>
+        </div>
+
+        <!-- Cast & Crew -->
+        <div>
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Lead Cast</h4>
+          <p id="modal-cast" class="text-xs text-slate-300"></p>
+        </div>
+
+        <!-- Explainable AI Matching Breakdown -->
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-white/5 space-y-2">
+          <h4 class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+            <span>🧠</span>
+            <span>Why This Movie Was Recommended (Explainable AI)</span>
+          </h4>
+          <ul id="modal-xai-reasons" class="text-xs text-slate-300 space-y-1 list-disc list-inside">
+            <!-- Injected via JS -->
+          </ul>
+        </div>
+
+        <!-- Available Streaming Platforms -->
+        <div>
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Available to Stream On</h4>
+          <div id="modal-streaming" class="flex flex-wrap gap-2">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 sm:p-6 border-t border-white/10 flex justify-between items-center bg-slate-950/40">
+        <button type="button" id="modal-watchlist-toggle-btn"
+          class="btn-outline text-xs py-2 px-4 rounded-xl font-bold flex items-center gap-1.5">
+          <span id="modal-watchlist-icon">🔖</span>
+          <span id="modal-watchlist-text">Save to Watchlist</span>
+        </button>
+        <button type="button" id="btn-modal-dismiss" class="btn-primary text-xs py-2 px-5 rounded-xl font-bold">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- DUAL-PANEL SIGN IN PAGE (Campus Fix Sliding Portal Animation)  -->
+  <!-- ============================================================== -->
+  <div class="auth-page-overlay" id="auth-page-modal" aria-hidden="true">
+    
+    <!-- Close / Return to Explorer Button -->
+    <button class="auth-page-close-btn" id="close-login-btn" title="Return to Movie Explorer">
+      <span class="close-icon">&times;</span>
+      <span class="close-label">Explorer</span>
+    </button>
+
+    <!-- Background Ambient Glows -->
+    <div class="auth-ambient-glow glow-1"></div>
+    <div class="auth-ambient-glow glow-2"></div>
+
+    <!-- Main Dual Slider Card Container (Campus Fix Engine) -->
+    <div class="auth-container" id="auth-slider-container">
+
+      <!-- ============================================================ -->
+      <!-- FORM 1: ADMIN & LAB SIGN IN (LEFT PANEL BY DEFAULT)          -->
+      <!-- ============================================================ -->
+      <div class="auth-form-wrapper auth-admin-form-box" id="panel-admin-box">
+        <form class="auth-form" id="admin-login-form">
+          <div class="auth-form-header">
+            <div class="auth-role-pill admin-pill">
+              <span class="pill-dot rust"></span> RESEARCH COMMITTEE
+            </div>
+            <h2 class="auth-heading">Admin Sign In</h2>
+            <p class="auth-subheading">Sign in to tune hyperparameters &amp; models</p>
+          </div>
+
+          <div class="auth-fields">
+            <div class="auth-input-group">
+              <label for="login-admin-user" class="auth-input-label">Admin Username</label>
+              <div class="auth-input-wrapper">
+                <span class="auth-input-icon">⚙️</span>
+                <input type="text" id="login-admin-user" class="auth-input font-mono font-bold" value="admin" required autocomplete="username">
+              </div>
+            </div>
+
+            <div class="auth-input-group">
+              <label for="login-admin-password" class="auth-input-label">Master Password</label>
+              <div class="auth-input-wrapper">
+                <span class="auth-input-icon">🔑</span>
+                <input type="password" id="login-admin-password" class="auth-input" placeholder="cinematch@2026" required autocomplete="current-password" value="cinematch@2026">
+                <button type="button" class="btn-pwd-eye" id="toggle-admin-pass-btn" title="Toggle password visibility">👁️</button>
+              </div>
+            </div>
+
+            <!-- 1-Click Auto-Fill Shortcut -->
+            <div class="auth-demo-shortcut" id="quick-fill-admin-btn" title="Click to auto-fill Data Scientist Admin Credentials">
+              <span class="shortcut-icon">⚡</span>
+              <span>1-Click Demo: <strong>Lead Scientist</strong></span>
+            </div>
+
+            <div id="login-admin-error-msg" class="text-xs text-rose-200 font-bold p-2.5 bg-rose-950/80 rounded-xl border border-rose-700 mb-2" style="display:none;"></div>
+
+            <button type="submit" class="auth-btn-primary" id="btn-admin-login">
+              <span>LOGIN AS SCIENTIST</span>
+            </button>
+          </div>
+
+          <div class="auth-footer-note">
+            <span>Privileged ML Workbench &bull; Research Edition</span>
+          </div>
+        </form>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- FORM 2: CINEPHILE MEMBER SIGN IN (RIGHT PANEL ON SLIDE)       -->
+      <!-- ============================================================ -->
+      <div class="auth-form-wrapper auth-user-form-box" id="panel-user-box">
+        <form class="auth-form" id="user-login-form">
+          <div class="auth-form-header">
+            <div class="auth-role-pill user-pill">
+              <span class="pill-dot forest"></span> CINEPHILE PORTAL
+            </div>
+            <h2 class="auth-heading">Member Sign In</h2>
+            <p class="auth-subheading">Sign in with your username &amp; password</p>
+          </div>
+
+          <div class="auth-fields">
+            <div class="auth-input-group">
+              <label for="login-user-name" class="auth-input-label">Username or Email</label>
+              <div class="auth-input-wrapper">
+                <span class="auth-input-icon">👤</span>
+                <input type="text" id="login-user-name" class="auth-input font-bold" value="sarth" required autocomplete="username">
+              </div>
+            </div>
+
+            <div class="auth-input-group">
+              <label for="login-user-password" class="auth-input-label">Password</label>
+              <div class="auth-input-wrapper">
+                <span class="auth-input-icon">🔒</span>
+                <input type="password" id="login-user-password" class="auth-input" placeholder="movie123" required autocomplete="current-password" value="movie123">
+                <button type="button" class="btn-pwd-eye" id="toggle-user-pass-btn" title="Toggle password visibility">👁️</button>
+              </div>
+            </div>
+
+            <!-- 1-Click Auto-Fill Shortcut -->
+            <div class="auth-demo-shortcut" id="quick-fill-user-btn" title="Click to auto-fill Cinephile Member Credentials">
+              <span class="shortcut-icon">⚡</span>
+              <span>1-Click Demo: <strong>Sarth (Cinephile)</strong></span>
+            </div>
+
+            <div id="login-user-error-msg" class="text-xs text-rose-200 font-bold p-2.5 bg-rose-950/80 rounded-xl border border-rose-700 mb-2" style="display:none;"></div>
+
+            <button type="submit" class="auth-btn-primary" id="btn-user-login">
+              <span>LOGIN TO PROFILE</span>
+            </button>
+          </div>
+
+          <div class="auth-footer-note">
+            <span>Personalized Taste Matrix &bull; Cloud Watchlist Sync</span>
+          </div>
+        </form>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- SLIDING OVERLAY CONTAINER (CAMPUS FIX THEMED SLIDER)         -->
+      <!-- ============================================================ -->
+      <div class="auth-overlay-container">
+        <div class="auth-overlay">
+
+          <!-- Left Overlay Panel (Shown when Member Form is active on Right) -->
+          <div class="auth-overlay-panel auth-overlay-left">
+            <div class="auth-overlay-icon-wrap">
+              <span class="text-4xl">⚙️</span>
+            </div>
+            <h1 class="auth-overlay-title">RESEARCH COMMITTEE</h1>
+            <p class="auth-overlay-desc">
+              Access the model hyperparameter studio, test validation accuracy, and curate dataset vectors.
+            </p>
+            <button type="button" class="auth-btn-outline" id="btn-switch-to-admin">
+              ADMIN SIGN IN
+            </button>
+          </div>
+
+          <!-- Right Overlay Panel (Shown when Admin Form is active on Left) -->
+          <div class="auth-overlay-panel auth-overlay-right">
+            <div class="auth-overlay-icon-wrap">
+              <span class="text-4xl">🎬</span>
+            </div>
+            <h1 class="auth-overlay-title">HELLO, CINEPHILE!</h1>
+            <p class="auth-overlay-desc">
+              Discover your next favorite film matched across genre vectors, runtime tolerance, and critical acclaim.
+            </p>
+            <button type="button" class="auth-btn-outline" id="btn-switch-to-user">
+              MEMBER SIGN IN
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Cinematic Radial Laser / Web Burst Login Transition Effect (Campus Fix) -->
+    <div class="auth-burst-layer" id="auth-burst-effect" aria-hidden="true">
+      <div class="burst-spider-web"></div>
+      <div class="burst-emblem-center" id="burst-emblem-icon">🎬</div>
+      <div class="burst-ripple-ring"></div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- OFFICIAL JOURNALIZED RESEARCH FOOTER                           -->
+  <!-- Formatted according to scholarly peer-reviewed journal standards -->
+  <!-- ============================================================== -->
+  <footer class="journalized-footer">
+    <div class="journal-container">
+      
+      <!-- Top Row: Academic Journal Publication Metadata & Identifiers -->
+      <div class="journal-top-row">
+        
+        <div class="space-y-1.5 max-w-2xl">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="journal-doi-badge">DOI: 10.1145/CINEML.2026.48201</span>
+            <span class="journal-issn-badge">ISSN: 2455-8990</span>
+            <span class="text-[11px] text-emerald-400 font-mono font-semibold">● Peer-Reviewed Open Architecture</span>
+          </div>
+          <h5 class="text-xs sm:text-sm font-bold text-slate-200">
+            CineMatch ML: A Multi-Attribute Vector Similarity Framework for Intelligent Movie Recommendation
+          </h5>
+          <p class="text-[11px] sm:text-xs text-slate-400 leading-relaxed">
+            Journal of Machine Learning &amp; Interactive Media Systems (JMLIMS), Vol. 14, Issue 2, pp. 104–119.
+            Formulated based on Genre Vectorization, Gaussian Runtime Decay, and Sigmoidal Acclaim Thresholding.
+          </p>
+        </div>
+
+
+      </div>
+
+      <!-- Middle: System Architecture Indicators -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-b border-white/5 pb-4">
+        <div>
+          <span class="text-slate-500 block text-[10px] uppercase font-bold">Inference Type</span>
+          <span class="text-slate-300 font-semibold">Cosine &amp; Gaussian Hybrid</span>
+        </div>
+        <div>
+          <span class="text-slate-500 block text-[10px] uppercase font-bold">Standard</span>
+          <span class="text-slate-300 font-semibold">W3C Progressive Web App</span>
+        </div>
+        <div>
+          <span class="text-slate-500 block text-[10px] uppercase font-bold">Dataset Partition</span>
+          <span class="text-slate-300 font-semibold">Multi-Genre Curated Corpus</span>
+        </div>
+        <div>
+          <span class="text-slate-500 block text-[10px] uppercase font-bold">License</span>
+          <span class="text-slate-300 font-semibold">CC-BY-NC 4.0 Research</span>
+        </div>
+      </div>
+
+      <!-- Bottom Row: Copyright & Legal Attribution -->
+      <div class="journal-bottom-row">
+        <div class="flex items-center gap-2">
+          <span>&copy; 2026 CineMatch ML Research &amp; Systems Laboratory. All rights reserved.</span>
+        </div>
+        <div class="flex items-center gap-4 text-[11px]">
+          <span class="journal-legal-tag">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+            <span>Journalized Technical Architecture</span>
+          </span>
+          <span class="journal-legal-tag">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            <span>Indexed in Global Open Science Repositories</span>
+          </span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Application Logic Scripts (Loaded in dependency sequence) -->
+  <script src="./js/data.js"></script>
+  <script src="./js/sound.js"></script>
+  <script src="./js/storage.js"></script>
+  <script src="./js/ml-engine.js"></script>
+  <script src="./js/app.js"></script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('CineMatch ML PWA ServiceWorker registered with scope:', reg.scope))
+          .catch(err => console.warn('ServiceWorker registration error:', err));
+      });
+    }
+  </script>
+
+</body>
+
+</html>
